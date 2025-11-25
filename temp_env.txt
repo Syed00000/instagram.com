@@ -1,0 +1,8 @@
+﻿MONGODB_URI=mongodb+srv://Syed:Syed1234@instagram.ka0z3md.mongodb.net/parental_control?retryWrites=true&w=majority
+
+SESSION_SECRET=instagram_parental_control_secret_key_2024
+PORT=5000
+FRONTEND_URL=http://localhost:3000
+
+
+
