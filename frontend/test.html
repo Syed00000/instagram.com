@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backend Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: #f9f9f9;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s;
+            margin: 5px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            background: white;
+            border-left: 4px solid #667eea;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        .success {
+            border-left-color: #4caf50;
+            background: #e8f5e9;
+        }
+        .error {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status.online {
+            background: #4caf50;
+            color: white;
+        }
+        .status.offline {
+            background: #f44336;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Backend & Frontend Test Suite</h1>
+        
+        <div class="test-section">
+            <h2>Server Status <span id="serverStatus" class="status">Checking...</span></h2>
+            <button onclick="checkServer()">Check Server</button>
+            <div id="serverResult" class="result" style="display:none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test Login API</h2>
+            <button onclick="testLogin()">Test Manual Login</button>
+            <div id="loginResult" class="result" style="display:none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test Admin API</h2>
+            <button onclick="testAdminUsers()">Get All Users</button>
+            <div id="adminResult" class="result" style="display:none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Frontend Pages</h2>
+            <button onclick="window.open('index.html', '_blank')">Open Login Page</button>
+            <button onclick="window.open('admin.html', '_blank')">Open Admin Panel</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+
+        async function checkServer() {
+            const resultDiv = document.getElementById('serverResult');
+            const statusSpan = document.getElementById('serverStatus');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Checking server...';
+
+            try {
+                const response = await fetch(`${API_URL}/admin/users`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    statusSpan.textContent = 'Online';
+                    statusSpan.className = 'status online';
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ Server is running!\n\nStatus: ${response.status}\nUsers in database: ${data.users?.length || 0}`;
+                } else {
+                    throw new Error(`Server returned ${response.status}`);
+                }
+            } catch (error) {
+                statusSpan.textContent = 'Offline';
+                statusSpan.className = 'status offline';
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Server is not running!\n\nError: ${error.message}\n\nMake sure to run: node server.js\nin the backend directory`;
+            }
+        }
+
+        async function testLogin() {
+            const resultDiv = document.getElementById('loginResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Testing login...';
+
+            const testData = {
+                username: 'testuser_' + Date.now(),
+                password: 'testpass123'
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/auth/manual-login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ Login API Working!\n\nRequest:\n${JSON.stringify(testData, null, 2)}\n\nResponse:\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    throw new Error(data.message || 'Login failed');
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Login API Failed!\n\nError: ${error.message}`;
+            }
+        }
+
+        async function testAdminUsers() {
+            const resultDiv = document.getElementById('adminResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Fetching users...';
+
+            try {
+                const response = await fetch(`${API_URL}/admin/users`);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    resultDiv.className = 'result success';
+                    const userSummary = data.users.map((u, i) => 
+                        `${i + 1}. ${u.username || 'N/A'} (${u.loginMethod}) - Last login: ${new Date(u.lastLogin).toLocaleString()}`
+                    ).join('\n');
+                    
+                    resultDiv.textContent = `✅ Admin API Working!\n\nTotal Users: ${data.users.length}\n\n${userSummary}`;
+                } else {
+                    throw new Error(data.message || 'Failed to fetch users');
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Admin API Failed!\n\nError: ${error.message}`;
+            }
+        }
+
+        // Check server status on page load
+        window.addEventListener('DOMContentLoaded', checkServer);
+    </script>
+</body>
+</html>

